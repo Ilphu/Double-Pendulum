@@ -201,6 +201,7 @@ public:
 
     vector<double> G(const vector<double>& y, const double& t);
     vector<double> RK4_step(const vector<double>& y, const double& t, const double& dt);
+    double get_energy();
     void update_state(double t, double dt);
     void update_d_omega();
     vector<RectPoint> get_position(bool state) const;
@@ -340,6 +341,17 @@ vector<double> DoublePendulum::RK4_step(const vector<double>& y, const double& t
     }
 
     return new_state;
+}
+
+double DoublePendulum::get_energy() {
+    double theta1 = _state[0];
+    double theta2 = _state[1];
+    double omega1 = _state[2];
+    double omega2 = _state[3];
+    double T = 0.5 * (_mass1 + _mass2) * _length1 * _length1 * omega1 * omega1 + (_mass2 / 2) * _length2 * _length2 * 
+               omega2 * omega2 + _mass2 * _length1 * _length2 * omega1 * omega2 * cos(theta1 - theta2);
+    double U = -(_mass1 + _mass2) * _length1 * g * cos(theta1) - _mass2 * _length2 * g * cos(theta2);
+    return T + U;
 }
 
 void DoublePendulum::update_state(double t, double dt) {
