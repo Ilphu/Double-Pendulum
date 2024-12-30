@@ -396,6 +396,59 @@ vector<RectPoint> DoublePendulum::get_position(bool state) const {
     return position;
 }
 
+vector<double> get_perturbed(double di, double df, vector<double> perturbed_state, vector<double> initial_state) {
+    vector<double> perturbed;
+    for (int i = 0; i < perturbed_state.size(); i++) {
+        perturbed.push_back(initial_state[i] + ((di * (perturbed_state[i] - initial_state[i])) / df));
+    }
+    return perturbed;
+}
+
+double temp_lyapunov(double di, double df) {
+    return log(abs(df / di));
+}
+
+double lyapunov_expo(double theta1, double theta2, double dt = 0.01, double run_time = 25, int sampling_freq = 20) {
+    vector<double> lyapunov_exponents;
+
+    DoublePendulum initial(theta1, theta2);
+    DoublePendulum perturbed(theta1 + 0.001, theta2);
+    double di = 0;
+    for (int i = 0; i < initial.get_state().size(); i++) {
+        di += (perturbed.get_state()[i] - initial.get_state()[i]) * (perturbed.get_state()[i] - initial.get_state()[i]);
+    }
+    di = sqrt(di);
+
+    int counter = 0;
+
+    for (double t = 0; t < run_time; t += dt) {
+        counter++;
+        initial.update_state(t, dt);
+        perturbed.update_state(t, dt);
+
+        if (!(counter % sampling_freq)) {
+            double df = 0;
+            for (int i = 0; i < initial.get_state().size(); i++) {
+                df += (perturbed.get_state()[i] - initial.get_state()[i]) * (perturbed.get_state()[i] - initial.get_state()[i]);
+            }
+            df = sqrt(df);
+            lyapunov_exponents.push_back(temp_lyapunov(di, df));
+            vector<double> new_perturbed_state = get_perturbed(di, df, perturbed.get_state(), initial.get_state());
+            perturbed.set_state(new_perturbed_state);
+            for (int i = 0; i < initial.get_state().size(); i++) {
+                di += (perturbed.get_state()[i] - initial.get_state()[i]) * (perturbed.get_state()[i] - initial.get_state()[i]);
+            }
+            di = sqrt(di);
+        }
+    }
+
+    double lyapunov_exponent = 0;
+    for (int i = 0; i < lyapunov_exponents.size(); i++) {
+        lyapunov_exponent += lyapunov_exponents[i];
+    }
+    return (lyapunov_exponent / run_time);
+}
+
 int main() {
     RectPoint o;
     int img_width;
@@ -437,21 +490,23 @@ int main() {
     // }
 
     double dt = 0.01;
-    double total_time = 100;
+    double total_time = 25;
     double t = 0;
     int frame = 0;
-
-    while (true) {
-        test = dp.get_position(1);
+    clock_t start = clock();
+    while (t < total_time) {
+        //test = dp.get_position(1);
         t += dt;
         dp.update_state(t, dt);
-        graph.clear_graph();
-        graph.draw_line(o, test[0]);
-        graph.draw_line(test[0], test[1]);
-        string file_name = "Double_Pendulum_" + to_string(frame) + ".png";
-        graph.write_image(file_name);
-        frame++;
+        // graph.clear_graph();
+        // graph.draw_line(o, test[0]);
+        // graph.draw_line(test[0], test[1]);
+        // string file_name = "Double_Pendulum_" + to_string(frame) + ".png";
+        // graph.write_image(file_name);
+        // frame++;
     }
-    
+    clock_t end = clock();
+    double time = (double) (end-start) / CLOCKS_PER_SEC * 1000.0;
+    cout << time << endl;
 
 }
