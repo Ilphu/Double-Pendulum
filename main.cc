@@ -201,6 +201,7 @@ public:
 
     vector<double> G(const vector<double>& y, const double& t);
     vector<double> RK4_step(const vector<double>& y, const double& t, const double& dt);
+    double get_energy();
     void update_state(double t, double dt);
     void update_d_omega();
     vector<RectPoint> get_position(bool state) const;
@@ -342,6 +343,17 @@ vector<double> DoublePendulum::RK4_step(const vector<double>& y, const double& t
     return new_state;
 }
 
+double DoublePendulum::get_energy() {
+    double theta1 = _state[0];
+    double theta2 = _state[1];
+    double omega1 = _state[2];
+    double omega2 = _state[3];
+    double T = 0.5 * (_mass1 + _mass2) * _length1 * _length1 * omega1 * omega1 + (_mass2 / 2) * _length2 * _length2 * 
+               omega2 * omega2 + _mass2 * _length1 * _length2 * omega1 * omega2 * cos(theta1 - theta2);
+    double U = -(_mass1 + _mass2) * _length1 * g * cos(theta1) - _mass2 * _length2 * g * cos(theta2);
+    return T + U;
+}
+
 void DoublePendulum::update_state(double t, double dt) {
     vector<double> new_state = RK4_step(_state, t, dt);
     for (int i = 0; i < _state.size(); i++) {
@@ -439,19 +451,17 @@ int main() {
     double dt = 0.01;
     double total_time = 100;
     double t = 0;
-    int frame = 0;
 
-    while (true) {
+    for (int frame = 0; frame < 1800; frame++) {
         test = dp.get_position(1);
         t += dt;
         dp.update_state(t, dt);
-        graph.clear_graph();
-        graph.draw_line(o, test[0]);
-        graph.draw_line(test[0], test[1]);
-        string file_name = "Double_Pendulum_" + to_string(frame) + ".png";
-        graph.write_image(file_name);
-        frame++;
+        cout << dp.get_energy() << endl;
+        // graph.clear_graph();
+        // graph.draw_line(o, test[0]);
+        // graph.draw_line(test[0], test[1]);
+        // string file_name = "Double_Pendulum_" + to_string(frame) + ".png";
+        // graph.write_image(file_name);
     }
     
-
 }
