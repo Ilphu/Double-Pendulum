@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <thread>
 #include <bits/stdc++.h> 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -23,6 +24,10 @@
 
 
 using namespace std;
+
+const int NUM_THREADS = 4;
+const int CHANNELS = 3;
+const double TAU = 2 * M_PI;
 
 struct RectPoint {
     double x = 0;
@@ -103,7 +108,7 @@ private:
     int _img_height = 100;
     double _graph_width = 4.0;
     double _graph_height = 4.0; 
-    const int CHANNELS = 3;
+    //const int CHANNELS = 3;
     int _img_size = _img_width * _img_height * CHANNELS;;
     
     uint8_t *_img;
@@ -580,7 +585,61 @@ struct Pixel get_heatmap_color(double t) {
     return px;
 }
 
-void draw_heatmap(int width = 1200, int height = 1200) {
+void draw_hm_helper(uint8_t* img, int width, int start_height, int end_height, string thread_idx) {
+    uint8_t *pix = img;
+
+    double step = TAU / width;
+    double theta1 = 0.0;
+    double theta2 = step * start_height;
+
+    for (int i = start_height; i < end_height; i++) {
+        cout << "Thread " + thread_idx + ": " << ((i + 1 - start_height) / (double)(end_height - start_height)) * 100 << "%" << endl;
+        theta2 += step;
+        theta1 = 0;
+        for (int j = 0; j < width; j++) {
+            theta1 += step;
+            double norm_lya = get_lyapunov_expo(theta1, theta2) / 2.2;
+            struct Pixel px;
+            px = get_heatmap_color(norm_lya);
+            pix = img + (((width * CHANNELS * j) + (i * CHANNELS)) - ((width * CHANNELS * j) + (i * CHANNELS)) % CHANNELS);
+            *(pix + 0) = (px.r);
+            *(pix + 1) = (px.g);
+            *(pix + 2) = (px.b);
+            pix += CHANNELS;
+            //heatmap.draw_pixel(i, j, px);
+        }
+    }
+}
+
+void draw_heatmap_multithread(int width = 100, int height = 100) {
+    if (height % NUM_THREADS != 0) {cout << "height % NUM_THREADS != 0" << endl; return;}
+    int lines_per_thread = height / NUM_THREADS;
+
+    int img_size = height * width * CHANNELS;
+    uint8_t *img = new uint8_t[img_size];
+
+    int start_height = lines_per_thread * 0;
+    int end_height = lines_per_thread * (0 + 1);
+    thread th00(draw_hm_helper, ref(img), width, start_height, end_height, "00");
+    start_height = lines_per_thread * 1;
+    end_height = lines_per_thread * (1 + 1);
+    thread th01(draw_hm_helper, ref(img), width, start_height, end_height, "01");
+    start_height = lines_per_thread * 2;
+    end_height = lines_per_thread * (2 + 1);
+    thread th02(draw_hm_helper, ref(img), width, start_height, end_height, "02");
+    start_height = lines_per_thread * 3;
+    end_height = lines_per_thread * (3 + 1);
+    thread th03(draw_hm_helper, ref(img), width, start_height, end_height, "03");
+    th00.join();
+    th01.join();
+    th02.join();
+    th03.join();
+
+    stbi_write_png("heatmap.png", width, height, CHANNELS, img, width * CHANNELS);
+    delete[] img;
+}
+
+void draw_heatmap_sing_thread(int width = 200, int height = 200) {
     const double TAU = 2 * M_PI;
     double step = TAU / (width);
     Graph heatmap(width, height, TAU, TAU);
@@ -604,5 +663,7 @@ void draw_heatmap(int width = 1200, int height = 1200) {
 
 
 int main() {
-    render(1.57, 3.14, 500, 500, 3600);
+    //render(1.57, 3.14, 500, 500, 3600);
+
+    draw_heatmap_multithread(400, 400);
 }
