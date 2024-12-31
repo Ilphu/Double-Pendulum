@@ -57,16 +57,46 @@ struct PolarPoint to_polar(const struct RectPoint& pt) {
 class Graph {
 public:
     Graph();
-    Graph(const int& img_width, const int& img_height, const int& graph_width, const int& graph_height);
+    Graph(const int& img_width_res, const int& img_height_res, const int& graph_width, const int& graph_height);
     ~Graph();
 
     struct Pixel get_pixel(const struct RectPoint& pt);
+    struct Pixel get_pixel(const int& pix_x, const int& pix_y);
     void draw_pixel(const struct RectPoint& pt, const struct Pixel& px);
     void draw_pixel(const int& pix_x, const int& pix_y, const struct Pixel& px);
     void draw_line(struct RectPoint pt0, struct RectPoint pt1);
     void clear_graph();
 
     void write_image(const string& file_name);
+
+    Graph& operator+=(Graph& graph) {
+        struct Pixel px_this;
+        struct Pixel px_graph;
+        for (int i = 0; i < _img_height; i++) {
+            for (int j = 0; j < _img_width; j++) {
+                px_this = this->get_pixel(j, i);
+                px_graph = graph.get_pixel(j, i);
+                int r = px_this.r + px_graph.r;
+                int g = px_this.g + px_graph.g;
+                int b = px_this.b + px_graph.b;
+
+                if (r > 0xFF) {
+                    r = 0xFF;
+                } else if (g > 0xFF) {
+                    g = 0xFF;
+                } else if (b > 0xFF) {
+                    b = 0xFF;
+                }
+
+                px_this.r = r;
+                px_this.g = g;
+                px_this.b = b;
+
+                this->draw_pixel(j, i, px_this);                
+            }
+        }
+        return *this;
+    }
 private:
 
     int _img_width = 100;
@@ -82,9 +112,9 @@ private:
 
 Graph::Graph() {}
 
-Graph::Graph(const int& img_width, const int& img_height, const int& graph_width, const int& graph_height) {
-    _img_width = img_width;
-    _img_height = img_height;
+Graph::Graph(const int& img_width_res, const int& img_height_res, const int& graph_width, const int& graph_height) {
+    _img_width = img_width_res;
+    _img_height = img_height_res;
     _graph_width = graph_width;
     _graph_height = graph_height;
     _img_size = _img_width * _img_height * CHANNELS;
@@ -101,6 +131,17 @@ struct Pixel Graph::get_pixel(const struct RectPoint& pt) {
     int pix_y = ((_img_height - 1) - (((pt.y / 2) + 0.5) * (_img_height - 1)));
     _pix = _img + (((_img_width * CHANNELS * pix_y) + pix_x) - 
     ((_img_width * CHANNELS * pix_y) + pix_x) % CHANNELS);
+    px.r = *(_pix + 0);
+    px.g = *(_pix + 1);
+    px.b = *(_pix + 2);
+
+    return px;
+}
+
+struct Pixel Graph::get_pixel(const int& pix_x, const int& pix_y) {
+    struct Pixel px;
+    _pix = _img + (((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) - 
+    ((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) % CHANNELS);
     px.r = *(_pix + 0);
     px.g = *(_pix + 1);
     px.b = *(_pix + 2);
@@ -193,6 +234,10 @@ public:
                    const double& length1, const double& length2);
     ~DoublePendulum();
 
+    void init(const double& theta1,  const double& theta2, 
+              const double& mass1,   const double& mass2, 
+              const double& length1, const double& length2);
+
     double get_mass1() const;
     double get_length1() const;
     double get_mass2() const;
@@ -209,9 +254,9 @@ public:
     vector<double> RK4_step(const vector<double>& y, const double& t, const double& dt);
     double get_energy();
     void update_state(double t, double dt);
-    void update_d_omega();
     vector<RectPoint> get_position(bool state) const;
 private:
+    void update_d_omega();
     const double g = 9.806;
 
     double _mass1;
@@ -255,6 +300,29 @@ DoublePendulum::DoublePendulum(const double& theta1,  const double& theta2,
 }
 
 DoublePendulum::~DoublePendulum() {}
+
+void DoublePendulum::init(const double& theta1,  const double& theta2, 
+                          const double& mass1,   const double& mass2, 
+                          const double& length1, const double& length2) {
+    
+    _mass1 = mass1;
+    _length1 = length1;
+
+    _mass2 = mass2;
+    _length2 = length2;
+
+    _theta1 = theta1;
+    _theta2 = theta2;
+    _omega1 = 0.0;
+    _omega2 = 0.0;
+    _d_omega1 = 0.0;
+    _d_omega2 = 0.0;
+
+    _state.push_back(_theta1);
+    _state.push_back(_theta2);
+    _state.push_back(_omega1);
+    _state.push_back(_omega2);
+}
 
 double DoublePendulum::get_mass1() const {return _mass1;}
 double DoublePendulum::get_length1() const {return _length1;}
@@ -398,6 +466,42 @@ vector<RectPoint> DoublePendulum::get_position(bool state) const {
     return position;
 }
 
+void render(const double& theta1, const double& theta2, const int& res_width, const int& res_height, const int& total_frames, const int& frame_rate = 60) {
+    Graph canvas(res_width, res_height, 4, 4);
+    Graph trace(res_width, res_height, 4, 4);
+    vector<DoublePendulum*> dp_arr;
+    for (int i = 0; i < 10; i++) {
+        DoublePendulum *dp = new DoublePendulum(theta1, theta2 + (0.0001 * i), 1, 1, 1, 1);
+        dp_arr.push_back(dp);
+    }
+    double dt = 1.0 / frame_rate;
+    double t = 0;
+    vector<struct RectPoint> dp_points;
+
+    struct RectPoint origin;
+    struct Pixel trace_color;
+    trace_color.r = 0x80;
+    trace_color.g = 0x80;
+    trace_color.b = 0x80;
+
+    for (int frame = 0; frame < total_frames; frame++) {
+        canvas.clear_graph();
+
+        for (int i = 0; i < dp_arr.size(); i++) {
+            dp_arr[i]->update_state(t, dt);
+            dp_points = dp_arr[i]->get_position(1);
+            canvas.draw_line(origin, dp_points[0]);
+            canvas.draw_line(dp_points[0], dp_points[1]);
+        }
+        t += dt;
+        // trace.draw_pixel(pend_points[1], trace_color);
+        // canvas += trace;
+        
+        string output = "frame_" + to_string(frame) + ".png";
+        canvas.write_image(output);
+    }
+}
+
 vector<double> get_perturbed(double di, double df, vector<double> perturbed_state, vector<double> initial_state) {
     vector<double> perturbed;
     for (int i = 0; i < perturbed_state.size(); i++) {
@@ -497,7 +601,8 @@ void draw_heatmap(int width = 1200, int height = 1200) {
     heatmap.write_image("heatmap.png");
 }
 
-int main() {
-    draw_heatmap(200, 200);
 
+
+int main() {
+    render(1.57, 3.14, 500, 500, 3600);
 }
