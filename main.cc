@@ -62,8 +62,8 @@ public:
 
     struct Pixel get_pixel(const struct RectPoint& pt);
     void draw_pixel(const struct RectPoint& pt, const struct Pixel& px);
+    void draw_pixel(const int& pix_x, const int& pix_y, const struct Pixel& px);
     void draw_line(struct RectPoint pt0, struct RectPoint pt1);
-
     void clear_graph();
 
     void write_image(const string& file_name);
@@ -80,9 +80,7 @@ private:
     uint8_t *_pix = _img;
 };
 
-Graph::Graph() {
-    // _img = new uint8_t[_img_size];
-}
+Graph::Graph() {}
 
 Graph::Graph(const int& img_width, const int& img_height, const int& graph_width, const int& graph_height) {
     _img_width = img_width;
@@ -113,9 +111,15 @@ struct Pixel Graph::get_pixel(const struct RectPoint& pt) {
 void Graph::draw_pixel(const struct RectPoint& pt, const struct Pixel& px) {
     int pix_x = (((pt.x / _graph_width) + 0.5) * (_img_width - 1) * CHANNELS);
     int pix_y = ((_img_height - 1) - (((pt.y / _graph_height) + 0.5) * (_img_height - 1)));
-    //cout << pix_x << ", " << pix_y << endl;
     _pix = _img + (((_img_width * CHANNELS * pix_y) + pix_x) - 
     ((_img_width * CHANNELS * pix_y) + pix_x) % CHANNELS);
+    *(_pix + 0) = px.r;
+    *(_pix + 1) = px.g;
+    *(_pix + 2) = px.b;
+}
+
+void Graph::draw_pixel(const int& pix_x, const int& pix_y, const struct Pixel& px) {
+    _pix = _img + (((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) - ((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) % CHANNELS);
     *(_pix + 0) = px.r;
     *(_pix + 1) = px.g;
     *(_pix + 2) = px.b;
@@ -169,7 +173,9 @@ void Graph::draw_line(struct RectPoint pt0, struct RectPoint pt1) {
 
 void Graph::clear_graph() {
     for (_pix = _img; _pix < (_img + _img_size); _pix++) {
-        *_pix = 0xFF;
+        if (*_pix == 0){
+            *_pix = 0xFF;
+        }
     }
 }
 
@@ -273,20 +279,6 @@ vector<double> DoublePendulum::G(const vector<double>& y, const double& t) {
     double num4;
     double den;
 
-    // double m11 = (_mass1 + _mass2) * _length1;
-    // double m12 = (_mass2 * _length2 * cos(theta1 - theta2));
-    // double m21 = (_length1 * cos(theta1 - theta2));
-    // double m22 = (_length2);
-
-    // double det_m = (m11 * m22) - (m12 * m21);
-
-    // double f1 = (-1 * _mass2 * _length2 * angular_v2 * angular_v2 * sin(theta1 - theta2)) -
-    //             ((_mass1 + _mass2) * g * sin(theta1));
-    // double f2 = (_length1 * angular_v1 * angular_v2 * sin(theta1 - theta2)) * (g * sin(theta2));
-
-    // double accel1 = (1 / det_m) * ((m22 * f1) - (m21 * f2));
-    // double accel2 = (1 / det_m) * ((-1 * m12 * f1) + (m11 * f2));
-
     double f1 = omega1;
     double f2 = omega2;
 
@@ -336,7 +328,6 @@ vector<double> DoublePendulum::RK4_step(const vector<double>& y, const double& t
     vector<double> k4 = G(temp, t + dt);
     
     for (int i = 0; i < k4.size(); i++) {
-        //cout << "here" << endl;
         new_state.push_back(dt * (k1[i] + (2 * k2[i]) + (2 * k3[i]) + k4[i]) / 6);
     }
 
@@ -358,7 +349,6 @@ void DoublePendulum::update_state(double t, double dt) {
     vector<double> new_state = RK4_step(_state, t, dt);
     for (int i = 0; i < _state.size(); i++) {
         _state[i] += new_state[i];
-        //cout << new_state[i] << endl;
     }
 }
 
@@ -417,14 +407,14 @@ vector<double> get_perturbed(double di, double df, vector<double> perturbed_stat
 }
 
 double temp_lyapunov(double di, double df) {
-    return log(abs(df / di));
+    return log(df / di);
 }
 
-double lyapunov_expo(double theta1, double theta2, double dt = 0.01, double run_time = 25, int sampling_freq = 20) {
+double get_lyapunov_expo(double theta1, double theta2, double dt = 0.01, double run_time = 25, int sampling_freq = 20) {
     vector<double> lyapunov_exponents;
 
-    DoublePendulum initial(theta1, theta2);
-    DoublePendulum perturbed(theta1 + 0.001, theta2);
+    DoublePendulum initial(theta1, theta2, 1, 1, 1, 1);
+    DoublePendulum perturbed(theta1 + 0.001, theta2, 1, 1, 1, 1);
     double di = 0;
     for (int i = 0; i < initial.get_state().size(); i++) {
         di += (perturbed.get_state()[i] - initial.get_state()[i]) * (perturbed.get_state()[i] - initial.get_state()[i]);
@@ -447,10 +437,6 @@ double lyapunov_expo(double theta1, double theta2, double dt = 0.01, double run_
             lyapunov_exponents.push_back(temp_lyapunov(di, df));
             vector<double> new_perturbed_state = get_perturbed(di, df, perturbed.get_state(), initial.get_state());
             perturbed.set_state(new_perturbed_state);
-            for (int i = 0; i < initial.get_state().size(); i++) {
-                di += (perturbed.get_state()[i] - initial.get_state()[i]) * (perturbed.get_state()[i] - initial.get_state()[i]);
-            }
-            di = sqrt(di);
         }
     }
 
@@ -461,64 +447,57 @@ double lyapunov_expo(double theta1, double theta2, double dt = 0.01, double run_
     return (lyapunov_exponent / run_time);
 }
 
-int main() {
-    RectPoint o;
-    int img_width;
-    int img_height;
-    int graph_width;
-    int graph_height;
-    double theta1;
-    double theta2;
-
-    printf("Image resolution:\nWidth:\n");
-    cin >> img_width;
-    printf("Height:\n");
-    cin >> img_height;
-    printf("Graph size:\nWidth:\n");
-    cin >> graph_width;
-    printf("Height:\n");
-    cin >> graph_height;
-    printf("Starting angle of pedulum arms:\nPrimary:\n");
-    cin >> theta1;
-    printf("Secondary:\n");
-    cin >> theta2;
-
-    DoublePendulum dp(theta1, theta2, 1, 1, 1, 1);
-    Graph graph(img_width, img_height, graph_width, graph_height);
-
-    vector<RectPoint> test;
-
-    // for (int i = 0; i < 150; i++) {
-    //     test = dp.get_position();
-    //     //cout << "p1 = (" << test[0].x << ", " << test[0].y << ")" << endl;
-    //     //cout << "p2 = (" << test[1].x << ", " << test[1].y << ")" << endl;
-    //     graph.clear_graph();
-    //     graph.draw_line(o, test[0]);
-    //     graph.draw_line(test[0], test[1]);
-    //     string file_name = "Double_Pendulum_" + to_string(i) + ".png";
-    //     graph.write_image(file_name);
-
-    //     dp.update_d_omega();
-    // }
-
-    double dt = 0.01;
-    double total_time = 25;
-    double t = 0;
-    int frame = 0;
-    clock_t start = clock();
-    while (t < total_time) {
-        //test = dp.get_position(1);
-        t += dt;
-        dp.update_state(t, dt);
-        // graph.clear_graph();
-        // graph.draw_line(o, test[0]);
-        // graph.draw_line(test[0], test[1]);
-        // string file_name = "Double_Pendulum_" + to_string(frame) + ".png";
-        // graph.write_image(file_name);
-        // frame++;
+struct Pixel get_heatmap_color(double t) {
+    const int NUM_COLORS = 4;
+    static double color[NUM_COLORS][3] = {{0, 0, 1},  
+                                          {0, 1, 0},  
+                                          {1, 1, 0},  
+                                          {1, 0, 0}};
+    int idx1;      
+    int idx2;      
+    double frac_between = 0;
+    
+    if (t <= 0) {
+        idx1 = idx2 = 0;            
+    } else if (t >= 1) {
+        idx1 = idx2 = NUM_COLORS - 1; 
+    } else {
+        t *= (NUM_COLORS - 1);      
+        idx1 = t;                
+        idx2 = idx1 + 1;                      
+        frac_between = t - idx1;  
     }
-    clock_t end = clock();
-    double time = (double) (end-start) / CLOCKS_PER_SEC * 1000.0;
-    cout << time << endl;
+    struct Pixel px;
+        
+    px.r = 255 * ((color[idx2][0] - color[idx1][0]) * frac_between + color[idx1][0]);
+    px.g = 255 * ((color[idx2][1] - color[idx1][1]) * frac_between + color[idx1][1]);
+    px.b = 255 * ((color[idx2][2] - color[idx1][2]) * frac_between + color[idx1][2]);
+
+    return px;
+}
+
+void draw_heatmap(int width = 1200, int height = 1200) {
+    const double TAU = 2 * M_PI;
+    double step = TAU / (width);
+    Graph heatmap(width, height, TAU, TAU);
+    struct RectPoint init;
+
+    for (int i = 0; i < height; i++) {
+        cout << "(" << init.x << ", " << init.y << ")" << endl;
+        init.y += step;
+        init.x = 0;
+        for (int j = 0; j < width; j++) {
+            init.x += step;
+            double norm_lya = get_lyapunov_expo(init.x, init.y) / 2.2;
+            struct Pixel px;
+            px = get_heatmap_color(norm_lya);
+            heatmap.draw_pixel(i, j, px);
+        }
+    }
+    heatmap.write_image("heatmap.png");
+}
+
+int main() {
+    draw_heatmap(200, 200);
 
 }
