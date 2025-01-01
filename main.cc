@@ -25,7 +25,7 @@
 
 using namespace std;
 
-const int NUM_THREADS = 4;
+const int NUM_THREADS = 12;
 const int CHANNELS = 3;
 const double TAU = 2 * M_PI;
 
@@ -630,10 +630,43 @@ void draw_heatmap_multithread(int width = 100, int height = 100) {
     start_height = lines_per_thread * 3;
     end_height = lines_per_thread * (3 + 1);
     thread th03(draw_hm_helper, ref(img), width, start_height, end_height, "03");
+    start_height = lines_per_thread * 4;
+    end_height = lines_per_thread * (4 + 1);
+    thread th04(draw_hm_helper, ref(img), width, start_height, end_height, "01");
+    start_height = lines_per_thread * 5;
+    end_height = lines_per_thread * (5 + 1);
+    thread th05(draw_hm_helper, ref(img), width, start_height, end_height, "02");
+    start_height = lines_per_thread * 6;
+    end_height = lines_per_thread * (6 + 1);
+    thread th06(draw_hm_helper, ref(img), width, start_height, end_height, "03");
+    start_height = lines_per_thread * 7;
+    end_height = lines_per_thread * (7 + 1);
+    thread th07(draw_hm_helper, ref(img), width, start_height, end_height, "01");
+    start_height = lines_per_thread * 8;
+    end_height = lines_per_thread * (8 + 1);
+    thread th08(draw_hm_helper, ref(img), width, start_height, end_height, "02");
+    start_height = lines_per_thread * 9;
+    end_height = lines_per_thread * (9 + 1);
+    thread th09(draw_hm_helper, ref(img), width, start_height, end_height, "03");
+    start_height = lines_per_thread * 10;
+    end_height = lines_per_thread * (10 + 1);
+    thread th10(draw_hm_helper, ref(img), width, start_height, end_height, "01");
+    start_height = lines_per_thread * 11;
+    end_height = lines_per_thread * (11 + 1);
+    thread th11(draw_hm_helper, ref(img), width, start_height, end_height, "02");
+    
     th00.join();
     th01.join();
     th02.join();
     th03.join();
+    th04.join();
+    th05.join();
+    th06.join();
+    th07.join();
+    th08.join();
+    th09.join();
+    th10.join();
+    th11.join();
 
     stbi_write_png("heatmap.png", width, height, CHANNELS, img, width * CHANNELS);
     delete[] img;
@@ -665,5 +698,5 @@ void draw_heatmap_sing_thread(int width = 200, int height = 200) {
 int main() {
     //render(1.57, 3.14, 500, 500, 3600);
 
-    draw_heatmap_multithread(400, 400);
+    draw_heatmap_multithread(2052, 2052);
 }
