@@ -25,7 +25,7 @@
 
 using namespace std;
 
-const int NUM_THREADS = 4;
+const int NUM_THREADS = 12;
 const int CHANNELS = 3;
 const double TAU = 2 * M_PI;
 
@@ -660,5 +660,5 @@ void draw_heatmap_sing_thread(int width = 200, int height = 200) {
 int main() {
     //render(1.57, 3.14, 500, 500, 3600);
 
-    draw_heatmap_multithread(400, 400);
+    draw_heatmap_multithread(2052, 2052);
 }
