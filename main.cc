@@ -14,6 +14,7 @@
 #include <vector>
 #include <cmath>
 #include <thread>
+#include <stdexcept>
 #include <bits/stdc++.h> 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -65,32 +66,88 @@ public:
     Graph(const int& img_width_res, const int& img_height_res, const int& graph_width, const int& graph_height);
     ~Graph();
 
+    int get_img_width() const;
+    int get_img_height() const;
+    double get_graph_width() const;
+    double get_graph_height() const;
+    int get_img_size() const;
+
+    // void set_img_width(const int& new_img_width);
+    // void set_img_height(const int& new_img_height);
+    // void set_graph_width(const double& new_graph_width);
+    // void set_graph_height(const double& new_graph_height);
+    
     struct Pixel get_pixel(const struct RectPoint& pt);
     struct Pixel get_pixel(const int& pix_x, const int& pix_y);
     void draw_pixel(const struct RectPoint& pt, const struct Pixel& px);
     void draw_pixel(const int& pix_x, const int& pix_y, const struct Pixel& px);
     void draw_line(struct RectPoint pt0, struct RectPoint pt1);
-    void clear_graph();
+    void draw_line(struct RectPoint pt0, struct RectPoint pt1, const struct Pixel& px);
+
+    void blackout();
+    void whiteout();
 
     void write_image(const string& file_name);
 
-    Graph& operator+=(Graph& graph) {
+    Graph operator-(Graph& graph) {
+        if (_img_size != graph.get_img_size()) {
+            cout << "Images of different sizes" << endl;
+            throw;
+        }
+        Graph out(_img_width, _img_height, _graph_width, _graph_height);
+        struct Pixel px_this;
+        struct Pixel px_graph;
+        struct Pixel px_out;
+        for (int i = 0; i < _img_height; i++) {
+            for (int j = 0; j < _img_width; j++) {
+                px_this = get_pixel(j, i);
+                px_graph = graph.get_pixel(j, i);
+
+                int r = px_this.r - px_graph.r;
+                int g = px_this.g - px_graph.g;
+                int b = px_this.b - px_graph.b;
+            
+                if (r < 0x00) {
+                    r = 0x00;
+                } else if (g < 0x00) {
+                    g = 0x00;
+                } else if (b < 0x00) {
+                    b = 0x00;
+                }
+
+                px_out.r = r;
+                px_out.g = g;
+                px_out.b = b;
+                
+                out.draw_pixel(j, i, px_out);
+            }
+        }
+        return out;
+    }
+
+    Graph& operator-=(Graph& graph) {
+        if (_img_size != graph.get_img_size()) {
+            cout << "Images of different sizes" << endl;
+            throw;
+        }
         struct Pixel px_this;
         struct Pixel px_graph;
         for (int i = 0; i < _img_height; i++) {
             for (int j = 0; j < _img_width; j++) {
                 px_this = this->get_pixel(j, i);
                 px_graph = graph.get_pixel(j, i);
-                int r = px_this.r + px_graph.r;
-                int g = px_this.g + px_graph.g;
-                int b = px_this.b + px_graph.b;
+                int r = px_this.r - px_graph.r;
+                int g = px_this.g - px_graph.g;
+                int b = px_this.b - px_graph.b;
 
-                if (r > 0xFF) {
-                    r = 0xFF;
-                } else if (g > 0xFF) {
-                    g = 0xFF;
-                } else if (b > 0xFF) {
-                    b = 0xFF;
+                if (r < 0) {
+                    r = 0;
+                }
+                if (g < 0) {
+                    g = 0;
+                } 
+                if (b < 0) {
+                    b = 0;
                 }
 
                 px_this.r = r;
@@ -109,7 +166,7 @@ private:
     double _graph_width = 4.0;
     double _graph_height = 4.0; 
     //const int CHANNELS = 3;
-    int _img_size = _img_width * _img_height * CHANNELS;;
+    int _img_size = _img_width * _img_height * CHANNELS;
     
     uint8_t *_img;
     uint8_t *_pix = _img;
@@ -130,6 +187,17 @@ Graph::~Graph() {
     delete[] _img;
 }
 
+int Graph::get_img_width() const { return _img_width; };
+int Graph::get_img_height() const { return _img_height; };
+double Graph::get_graph_width() const { return _graph_width; };
+double Graph::get_graph_height() const { return _graph_height; };
+int Graph::get_img_size() const { return _img_size; };
+
+// void Graph::set_img_width(const int& new_img_width) {};
+// void Graph::set_img_height(const int& new_img_height) {};
+// void Graph::set_graph_width(const double& new_graph_width) {};
+// void Graph::set_graph_height(const double& new_graph_height) {};
+
 struct Pixel Graph::get_pixel(const struct RectPoint& pt) {
     struct Pixel px;
     int pix_x = (((pt.x / 2) + 0.5) * (_img_width - 1) * CHANNELS);
@@ -145,6 +213,7 @@ struct Pixel Graph::get_pixel(const struct RectPoint& pt) {
 
 struct Pixel Graph::get_pixel(const int& pix_x, const int& pix_y) {
     struct Pixel px;
+
     _pix = _img + (((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) - 
     ((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) % CHANNELS);
     px.r = *(_pix + 0);
@@ -165,23 +234,28 @@ void Graph::draw_pixel(const struct RectPoint& pt, const struct Pixel& px) {
 }
 
 void Graph::draw_pixel(const int& pix_x, const int& pix_y, const struct Pixel& px) {
-    _pix = _img + (((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) - ((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) % CHANNELS);
+    _pix = _img + (((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) - 
+    ((_img_width * CHANNELS * pix_y) + (pix_x * CHANNELS)) % CHANNELS);
     *(_pix + 0) = px.r;
     *(_pix + 1) = px.g;
     *(_pix + 2) = px.b;
 }
 
 void Graph::draw_line(struct RectPoint pt0, struct RectPoint pt1) {
+    struct Pixel px;
+    px.r = 0;
+    px.g = 0;
+    px.b = 0;
+    draw_line(pt0, pt1, px);
+}
+
+void Graph::draw_line(struct RectPoint pt0, struct RectPoint pt1, const struct Pixel& px) {
     struct RectPoint pt;
     struct RectPoint swap;
     double dx = pt1.x - pt0.x;
     double dy = pt1.y - pt0.y;
     double m = dy / dx;
-
-    struct Pixel px;
-    px.r = 0;
-    px.g = 0;
-    px.b = 0;
+    
     if (abs(m) > 1) {
         if (pt0.y > pt1.y) {
             swap.x = pt0.x;
@@ -193,9 +267,6 @@ void Graph::draw_line(struct RectPoint pt0, struct RectPoint pt1) {
         }
         for (pt.y = pt0.y; pt.y < pt1.y; pt.y += (1.0 / _img_width)) {
             pt.x = ((pt.y - pt0.y) / m) + pt0.x;
-            px.r = 0;
-            px.g = 0;
-            px.b = 0;
             draw_pixel(pt, px);
         }
     } else {
@@ -209,19 +280,20 @@ void Graph::draw_line(struct RectPoint pt0, struct RectPoint pt1) {
         }
         for (pt.x = pt0.x; pt.x < pt1.x; pt.x += (1.0 / _img_width)) {
             pt.y = m * (pt.x - pt0.x) + pt0.y;
-            px.r = 0;
-            px.g = 0;
-            px.b = 0;
             draw_pixel(pt, px);
         }
     }
 }
 
-void Graph::clear_graph() {
+void Graph::blackout() {
     for (_pix = _img; _pix < (_img + _img_size); _pix++) {
-        if (*_pix == 0){
-            *_pix = 0xFF;
-        }
+        *_pix = 0x00;
+    }
+}
+
+void Graph::whiteout() {
+    for (_pix = _img; _pix < (_img + _img_size); _pix++) {
+        *_pix = 0xFF;
     }
 }
 
@@ -471,39 +543,53 @@ vector<RectPoint> DoublePendulum::get_position(bool state) const {
     return position;
 }
 
-void render(const double& theta1, const double& theta2, const int& res_width, const int& res_height, const int& total_frames, const int& frame_rate = 60) {
+void render(const double& theta1, const double& theta2, const int& num_pendulums, 
+            const int& res_width, const int& res_height, const int& total_frames, 
+            const int& frame_rate = 60) {
+
+    struct RectPoint origin;
+    
     Graph canvas(res_width, res_height, 4, 4);
     Graph trace(res_width, res_height, 4, 4);
+    trace.blackout();
+
     vector<DoublePendulum*> dp_arr;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < num_pendulums; i++) {
         DoublePendulum *dp = new DoublePendulum(theta1, theta2 + (0.0001 * i), 1, 1, 1, 1);
         dp_arr.push_back(dp);
     }
     double dt = 1.0 / frame_rate;
     double t = 0;
+
     vector<struct RectPoint> dp_points;
 
-    struct RectPoint origin;
+    struct RectPoint prev_trace;
+    struct RectPoint curr_trace;
     struct Pixel trace_color;
-    trace_color.r = 0x80;
-    trace_color.g = 0x80;
-    trace_color.b = 0x80;
+    trace_color.r = 0x40;
+    trace_color.g = 0x40;
+    trace_color.b = 0x40;
 
     for (int frame = 0; frame < total_frames; frame++) {
-        canvas.clear_graph();
+        canvas.whiteout();
 
-        for (int i = 0; i < dp_arr.size(); i++) {
+        for (int i = 0; i < num_pendulums; i++) {
             dp_arr[i]->update_state(t, dt);
             dp_points = dp_arr[i]->get_position(1);
             canvas.draw_line(origin, dp_points[0]);
             canvas.draw_line(dp_points[0], dp_points[1]);
+
+            prev_trace = curr_trace;
+            curr_trace = dp_points[1];
+            if (frame != 0) { trace.draw_line(prev_trace, curr_trace, trace_color); }
         }
         t += dt;
-        // trace.draw_pixel(pend_points[1], trace_color);
-        // canvas += trace;
+        
+        canvas -= trace;
         
         string output = "frame_" + to_string(frame) + ".png";
         canvas.write_image(output);
+    
     }
 }
 
@@ -629,7 +715,6 @@ void draw_heatmap_multithread(int width = 100, int height = 100) {
         delete thread_grp[i];
     }
 
-
     stbi_write_png("heatmap.png", width, height, CHANNELS, img, width * CHANNELS);
     delete[] img;
 }
@@ -641,7 +726,7 @@ void draw_heatmap_sing_thread(int width = 200, int height = 200) {
     struct RectPoint init;
 
     for (int i = 0; i < height; i++) {
-        cout << "(" << init.x << ", " << init.y << ")" << endl;
+        //cout << "(" << init.x << ", " << init.y << ")" << endl;
         init.y += step;
         init.x = 0;
         for (int j = 0; j < width; j++) {
@@ -655,10 +740,34 @@ void draw_heatmap_sing_thread(int width = 200, int height = 200) {
     heatmap.write_image("heatmap.png");
 }
 
+vector<struct RectPoint> find_stable(int resolution, double threshold, double radius = M_PI_2) {
+    double step = TAU / resolution;
+    vector<struct RectPoint> stable;
+    double min = 3;
+    for (int i = 0; i < resolution; i++) {
+        struct RectPoint init;
+        init.x = i * step;
+        for (int j = 0; j < resolution; j++) {
+            init.y = j * step;
+        
+            if ((((init.x - M_PI) * (init.x - M_PI)) + ((init.y - M_PI) * (init.y - M_PI))) < (radius * radius)) {
+                double lya = get_lyapunov_expo(init.x, init.y);
+                if (lya < min) {
+                    min = lya;
+                    cout << min << endl;
+                }
+                if (lya < threshold) {
+                    stable.push_back(init);
+                    cout << "(" << init.x * 180 / M_PI << ", " << init.y * 180 / M_PI << ") -> " << lya << endl;
+                }
+            }
+        }
+    }
+    return stable;
+}
 
-
-int main() {
-    //render(1.57, 3.14, 500, 500, 3600);
-
-    draw_heatmap_multithread(2052, 2052);
+int main(int argc, char* argv[]) {
+    render(3.38507, 4.36681, 1, 500, 500, 600);
+    //draw_heatmap_multithread(2052, 2052);
+    //find_stable(800, 0.3, (TAU / 3));
 }
