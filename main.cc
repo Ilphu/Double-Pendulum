@@ -618,22 +618,17 @@ void draw_heatmap_multithread(int width = 100, int height = 100) {
     int img_size = height * width * CHANNELS;
     uint8_t *img = new uint8_t[img_size];
 
-    int start_height = lines_per_thread * 0;
-    int end_height = lines_per_thread * (0 + 1);
-    thread th00(draw_hm_helper, ref(img), width, start_height, end_height, "00");
-    start_height = lines_per_thread * 1;
-    end_height = lines_per_thread * (1 + 1);
-    thread th01(draw_hm_helper, ref(img), width, start_height, end_height, "01");
-    start_height = lines_per_thread * 2;
-    end_height = lines_per_thread * (2 + 1);
-    thread th02(draw_hm_helper, ref(img), width, start_height, end_height, "02");
-    start_height = lines_per_thread * 3;
-    end_height = lines_per_thread * (3 + 1);
-    thread th03(draw_hm_helper, ref(img), width, start_height, end_height, "03");
-    th00.join();
-    th01.join();
-    th02.join();
-    th03.join();
+    vector<thread*> thread_grp;
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        thread_grp.push_back(new thread(draw_hm_helper, ref(img), width, lines_per_thread * i, lines_per_thread * (i + 1), to_string(i)));
+    }
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        thread_grp[i]->join();
+        delete thread_grp[i];
+    }
+
 
     stbi_write_png("heatmap.png", width, height, CHANNELS, img, width * CHANNELS);
     delete[] img;
