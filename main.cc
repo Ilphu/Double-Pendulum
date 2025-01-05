@@ -15,6 +15,7 @@
 #include <cmath>
 #include <thread>
 #include <stdexcept>
+//#include <iomapip>
 #include <bits/stdc++.h> 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -26,7 +27,7 @@
 
 using namespace std;
 
-const int NUM_THREADS = 12;
+const int NUM_THREADS = 8;
 const int CHANNELS = 3;
 const double TAU = 2 * M_PI;
 
@@ -63,7 +64,7 @@ struct PolarPoint to_polar(const struct RectPoint& pt) {
 class Graph {
 public:
     Graph();
-    Graph(const int& img_width_res, const int& img_height_res, const int& graph_width, const int& graph_height);
+    Graph(const int& img_width_res, const int& img_height_res, const double& graph_width, const double& graph_height);
     ~Graph();
 
     int get_img_width() const;
@@ -86,6 +87,7 @@ public:
 
     void blackout();
     void whiteout();
+    void bg_fill(const struct Pixel& px);
 
     void write_image(const string& file_name);
 
@@ -140,15 +142,38 @@ public:
                 int g = px_this.g - px_graph.g;
                 int b = px_this.b - px_graph.b;
 
-                if (r < 0) {
-                    r = 0;
-                }
-                if (g < 0) {
-                    g = 0;
-                } 
-                if (b < 0) {
-                    b = 0;
-                }
+                if (r < 0) { r = 0; }
+                if (g < 0) { g = 0; } 
+                if (b < 0) { b = 0; }
+
+                px_this.r = r;
+                px_this.g = g;
+                px_this.b = b;
+
+                this->draw_pixel(j, i, px_this);                
+            }
+        }
+        return *this;
+    }
+
+    Graph& operator+=(Graph& graph) {
+        if (_img_size != graph.get_img_size()) {
+            cout << "Images of different sizes" << endl;
+            throw;
+        }
+        struct Pixel px_this;
+        struct Pixel px_graph;
+        for (int i = 0; i < _img_height; i++) {
+            for (int j = 0; j < _img_width; j++) {
+                px_this = this->get_pixel(j, i);
+                px_graph = graph.get_pixel(j, i);
+                int r = px_this.r + px_graph.r;
+                int g = px_this.g + px_graph.g;
+                int b = px_this.b + px_graph.b;
+
+                if (r > 0xFF) { r = 0xFF; }
+                if (g > 0xFF) { g = 0xFF; } 
+                if (b > 0xFF) { b = 0xFF; }
 
                 px_this.r = r;
                 px_this.g = g;
@@ -174,7 +199,7 @@ private:
 
 Graph::Graph() {}
 
-Graph::Graph(const int& img_width_res, const int& img_height_res, const int& graph_width, const int& graph_height) {
+Graph::Graph(const int& img_width_res, const int& img_height_res, const double& graph_width, const double& graph_height) {
     _img_width = img_width_res;
     _img_height = img_height_res;
     _graph_width = graph_width;
@@ -294,6 +319,14 @@ void Graph::blackout() {
 void Graph::whiteout() {
     for (_pix = _img; _pix < (_img + _img_size); _pix++) {
         *_pix = 0xFF;
+    }
+}
+
+void Graph::bg_fill(const struct Pixel& px) {
+    for (_pix = _img; _pix < (_img + _img_size); _pix += CHANNELS) {
+        *(_pix + 0) = px.r;
+        *(_pix + 1) = px.g;
+        *(_pix + 2) = px.b;
     }
 }
 
@@ -549,8 +582,8 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
 
     struct RectPoint origin;
     
-    Graph canvas(res_width, res_height, 4, 4);
-    Graph trace(res_width, res_height, 4, 4);
+    Graph canvas(res_width, res_height, 7.11111, 4);
+    Graph trace(res_width, res_height, 7.11111, 4);
     trace.blackout();
 
     vector<DoublePendulum*> dp_arr;
@@ -565,19 +598,32 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
 
     struct RectPoint prev_trace;
     struct RectPoint curr_trace;
+
     struct Pixel trace_color;
     trace_color.r = 0x40;
     trace_color.g = 0x40;
     trace_color.b = 0x40;
 
+    // #1e1e2e
+    struct Pixel bg_color;
+    bg_color.r = 0x1e;
+    bg_color.g = 0x1e;
+    bg_color.b = 0x2e;
+
+    // #89b4fa
+    struct Pixel pendulum_color;
+    pendulum_color.r = 0x89;
+    pendulum_color.g = 0xb4;
+    pendulum_color.b = 0xfa;
+
     for (int frame = 0; frame < total_frames; frame++) {
-        canvas.whiteout();
+        canvas.bg_fill(bg_color);
 
         for (int i = 0; i < num_pendulums; i++) {
             dp_arr[i]->update_state(t, dt);
             dp_points = dp_arr[i]->get_position(1);
-            canvas.draw_line(origin, dp_points[0]);
-            canvas.draw_line(dp_points[0], dp_points[1]);
+            canvas.draw_line(origin, dp_points[0], pendulum_color);
+            canvas.draw_line(dp_points[0], dp_points[1], pendulum_color);
 
             prev_trace = curr_trace;
             curr_trace = dp_points[1];
@@ -585,7 +631,7 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
         }
         t += dt;
         
-        canvas -= trace;
+        canvas += trace;
         
         string output = "frame_" + to_string(frame) + ".png";
         canvas.write_image(output);
@@ -683,10 +729,12 @@ void draw_hm_helper(uint8_t* img, int width, int start_height, int end_height, s
         theta2 += step;
         theta1 = 0;
         for (int j = 0; j < width; j++) {
-            theta1 += step;
-            double norm_lya = get_lyapunov_expo(theta1, theta2) / 2.2;
             struct Pixel px;
-            px = get_heatmap_color(norm_lya);
+            theta1 += step;
+            //if ((((theta1 - M_PI) * (theta1 - M_PI)) + ((theta2 - M_PI) * (theta2 - M_PI))) < ((TAU / 3) * (TAU / 4))) {
+                double norm_lya = get_lyapunov_expo(theta1, theta2) / 2.2;
+                px = get_heatmap_color(norm_lya);
+            //}
             pix = img + (((width * CHANNELS * j) + (i * CHANNELS)) - ((width * CHANNELS * j) + (i * CHANNELS)) % CHANNELS);
             *(pix + 0) = (px.r);
             *(pix + 1) = (px.g);
@@ -715,7 +763,7 @@ void draw_heatmap_multithread(int width = 100, int height = 100) {
         delete thread_grp[i];
     }
 
-    stbi_write_png("heatmap.png", width, height, CHANNELS, img, width * CHANNELS);
+    stbi_write_png("heatmap1.png", width, height, CHANNELS, img, width * CHANNELS);
     delete[] img;
 }
 
@@ -740,7 +788,7 @@ void draw_heatmap_sing_thread(int width = 200, int height = 200) {
     heatmap.write_image("heatmap.png");
 }
 
-vector<struct RectPoint> find_stable(int resolution, double threshold, double radius = M_PI_2) {
+vector<struct RectPoint> find_stable(const int& resolution, const double& threshold, const double& radius = M_PI_2) {
     double step = TAU / resolution;
     vector<struct RectPoint> stable;
     double min = 3;
@@ -758,7 +806,7 @@ vector<struct RectPoint> find_stable(int resolution, double threshold, double ra
                 }
                 if (lya < threshold) {
                     stable.push_back(init);
-                    cout << "(" << init.x * 180 / M_PI << ", " << init.y * 180 / M_PI << ") -> " << lya << endl;
+                    cout << "(" << setprecision(15) << init.x << ", " << init.y << ") -> " << lya << endl;
                 }
             }
         }
@@ -766,8 +814,45 @@ vector<struct RectPoint> find_stable(int resolution, double threshold, double ra
     return stable;
 }
 
+vector<struct RectPoint> stable_cluster(struct RectPoint& init, const int& resolution, const double& threshold, const double& radius = 0.1) {
+    double step = 2 * radius / resolution;
+    vector<struct RectPoint> stable;
+    double min = 3;
+    init.x -= radius;
+    init.y -= radius;
+    double inity = init.y;
+    for (int i = 0; i < resolution; i++) {
+        init.x += step;
+        init.y = inity;
+        for (int j = 0; j < resolution; j++) {
+            init.y += step;
+            double lya = get_lyapunov_expo(init.x, init.y);
+            if (lya < min) {
+                min = lya;
+                cout << min << endl;
+            }
+            if (lya < threshold) {
+                stable.push_back(init);
+                cout << "(" << setprecision(15) << init.x << ", " << init.y << ") -> " << lya << endl;
+            }
+        }
+    }
+    return stable;
+}
+
 int main(int argc, char* argv[]) {
-    render(3.38507, 4.36681, 1, 500, 500, 600);
-    //draw_heatmap_multithread(2052, 2052);
-    //find_stable(800, 0.3, (TAU / 3));
+    //render(2.06780610206984, 2.46970906849588, 1, 1920, 1080, 3600);
+    // 2.72533162698915, 4.43749962319558
+    // 3.55576746631892, 1.84077694546277 < butterfly
+    // 3.95460247116918, 3.01580622898317 < bee
+    draw_heatmap_multithread(800, 800);
+    //find_stable(2048, 0.2, (TAU / 4));
+    // struct RectPoint init;
+    // init.x = 3.55785;
+    // init.y = 1.84569;
+    // stable_cluster(init, 100, 0.3);
+
+    // #1e1e2e
+    // #89b4fa
+    // #babbf1
 }
