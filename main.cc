@@ -1,12 +1,8 @@
 /**
  * @file main.cc
- * @author your name (you@domain.com)
- * @brief 
- * @version 0.1
+ * @author Garrett Rhoads
+ * @brief A study in stable double pendulum orbits
  * @date 2024-12-25
- * 
- * @copyright Copyright (c) 2024
- * 
  */
 
 #include <stdio.h>
@@ -27,7 +23,7 @@
 
 using namespace std;
 
-const int NUM_THREADS = 8;
+const int NUM_THREADS = 4;
 const int CHANNELS = 3;
 const double TAU = 2 * M_PI;
 
@@ -717,29 +713,32 @@ struct Pixel get_heatmap_color(double t) {
     return px;
 }
 
-void draw_hm_helper(uint8_t* img, int width, int start_height, int end_height, string thread_idx) {
+void draw_hm_helper(uint8_t* img, int width, int height, int start_height, int end_height, string thread_idx) {
     uint8_t *pix = img;
 
     double step = TAU / width;
-    double theta1 = 0.0;
-    double theta2 = step * start_height;
+    double theta1 = step * start_height;
+    double theta2 = 0.0;
 
     for (int i = start_height; i < end_height; i++) {
         cout << "Thread " + thread_idx + ": " << ((i + 1 - start_height) / (double)(end_height - start_height)) * 100 << "%" << endl;
-        theta2 += step;
-        theta1 = 0;
+        theta1 += step;
+        theta2 = 0;
         for (int j = 0; j < width; j++) {
             struct Pixel px;
-            theta1 += step;
+            theta2 += step;
             //if ((((theta1 - M_PI) * (theta1 - M_PI)) + ((theta2 - M_PI) * (theta2 - M_PI))) < ((TAU / 3) * (TAU / 4))) {
                 double norm_lya = get_lyapunov_expo(theta1, theta2) / 2.2;
                 px = get_heatmap_color(norm_lya);
             //}
-            pix = img + (((width * CHANNELS * j) + (i * CHANNELS)) - ((width * CHANNELS * j) + (i * CHANNELS)) % CHANNELS);
+            pix = img + (((width * CHANNELS * i) + (j * CHANNELS)) - ((width * CHANNELS * i) + (j * CHANNELS)) % CHANNELS);
             *(pix + 0) = (px.r);
             *(pix + 1) = (px.g);
             *(pix + 2) = (px.b);
-            pix += CHANNELS;
+            pix = img + (((width * CHANNELS * (height - i - 1)) + ((width - j - 1) * CHANNELS)) - ((width * CHANNELS * (height - i - 1)) + ((width - j - 1) * CHANNELS)) % CHANNELS);
+            *(pix + 0) = (px.r);
+            *(pix + 1) = (px.g);
+            *(pix + 2) = (px.b);
             //heatmap.draw_pixel(i, j, px);
         }
     }
@@ -747,7 +746,7 @@ void draw_hm_helper(uint8_t* img, int width, int start_height, int end_height, s
 
 void draw_heatmap_multithread(int width = 100, int height = 100) {
     if (height % NUM_THREADS != 0) {cout << "height % NUM_THREADS != 0" << endl; return;}
-    int lines_per_thread = height / NUM_THREADS;
+    int lines_per_thread = height / (NUM_THREADS * 2);
 
     int img_size = height * width * CHANNELS;
     uint8_t *img = new uint8_t[img_size];
@@ -755,7 +754,7 @@ void draw_heatmap_multithread(int width = 100, int height = 100) {
     vector<thread*> thread_grp;
 
     for (int i = 0; i < NUM_THREADS; i++) {
-        thread_grp.push_back(new thread(draw_hm_helper, ref(img), width, lines_per_thread * i, lines_per_thread * (i + 1), to_string(i)));
+        thread_grp.push_back(new thread(draw_hm_helper, ref(img), width, height, lines_per_thread * i, lines_per_thread * (i + 1), to_string(i)));
     }
 
     for (int i = 0; i < NUM_THREADS; i++) {
@@ -845,7 +844,7 @@ int main(int argc, char* argv[]) {
     // 2.72533162698915, 4.43749962319558
     // 3.55576746631892, 1.84077694546277 < butterfly
     // 3.95460247116918, 3.01580622898317 < bee
-    draw_heatmap_multithread(800, 800);
+    draw_heatmap_multithread(1080, 1080);
     //find_stable(2048, 0.2, (TAU / 4));
     // struct RectPoint init;
     // init.x = 3.55785;
