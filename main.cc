@@ -12,7 +12,7 @@
 #include <thread>
 #include <stdexcept>
 //#include <iomapip>
-#include <bits/stdc++.h> 
+//#include <bits/stdc++.h> 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -189,7 +189,7 @@ private:
     //const int CHANNELS = 3;
     int _img_size = _img_width * _img_height * CHANNELS;
     
-    uint8_t *_img;
+    uint8_t *_img = nullptr;
     uint8_t *_pix = _img;
 };
 
@@ -356,7 +356,7 @@ public:
     void set_length2(const double& new_length2);
     void set_state(const vector<double>& new_state);
 
-    vector<double> G(const vector<double>& y, const double& t);
+    vector<double> diff_eq(const vector<double>& y, double t);
     vector<double> RK4_step(const vector<double>& y, const double& t, const double& dt);
     double get_energy();
     void update_state(double t, double dt);
@@ -442,7 +442,8 @@ void DoublePendulum::set_length2(const double& new_length2) {_length2 = new_leng
 void DoublePendulum::set_state(const vector<double>& new_state) {_state[0] = new_state[0]; _state[1] = new_state[1]; 
                                                                  _state[2] = new_state[2]; _state[3] = new_state[3];}
 
-vector<double> DoublePendulum::G(const vector<double>& y, const double& t) {
+vector<double> DoublePendulum::diff_eq(const vector<double>& y, double t) {
+    t++; // to make cmake happy
     double theta1 = y[0];
     double theta2 = y[1];
     double omega1 = y[2];
@@ -482,26 +483,26 @@ vector<double> DoublePendulum::RK4_step(const vector<double>& y, const double& t
     vector<double> temp = y;
     vector<double> new_state;
 
-    vector<double> k1 = G(temp, t);
+    vector<double> k1 = diff_eq(temp, t);
 
-    for (int i = 0; i < y.size(); i++) {
+    for (unsigned int i = 0; i < y.size(); i++) {
         temp[i] += k1[i] * 0.5 * dt;
     }
-    vector<double> k2 = G(temp, t + (0.5 * dt));
+    vector<double> k2 = diff_eq(temp, t + (0.5 * dt));
 
     temp = y;
-    for (int i = 0; i < y.size(); i++) {
+    for (unsigned int i = 0; i < y.size(); i++) {
         temp[i] += k2[i] * 0.5 * dt;
     }
-    vector<double> k3 = G(temp, t + (0.5 * dt));
+    vector<double> k3 = diff_eq(temp, t + (0.5 * dt));
 
     temp = y;
-    for (int i = 0; i < y.size(); i++) {
+    for (unsigned int i = 0; i < y.size(); i++) {
         temp[i] += k3[i] * dt;
     }
-    vector<double> k4 = G(temp, t + dt);
+    vector<double> k4 = diff_eq(temp, t + dt);
     
-    for (int i = 0; i < k4.size(); i++) {
+    for (unsigned int i = 0; i < k4.size(); i++) {
         new_state.push_back(dt * (k1[i] + (2 * k2[i]) + (2 * k3[i]) + k4[i]) / 6);
     }
 
@@ -521,7 +522,7 @@ double DoublePendulum::get_energy() {
 
 void DoublePendulum::update_state(double t, double dt) {
     vector<double> new_state = RK4_step(_state, t, dt);
-    for (int i = 0; i < _state.size(); i++) {
+    for (unsigned int i = 0; i < _state.size(); i++) {
         _state[i] += new_state[i];
     }
 }
@@ -637,7 +638,7 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
 
 vector<double> get_perturbed(double di, double df, vector<double> perturbed_state, vector<double> initial_state) {
     vector<double> perturbed;
-    for (int i = 0; i < perturbed_state.size(); i++) {
+    for (unsigned int i = 0; i < perturbed_state.size(); i++) {
         perturbed.push_back(initial_state[i] + ((di * (perturbed_state[i] - initial_state[i])) / df));
     }
     return perturbed;
@@ -653,7 +654,7 @@ double get_lyapunov_expo(double theta1, double theta2, double dt = 0.01, double 
     DoublePendulum initial(theta1, theta2, 1, 1, 1, 1);
     DoublePendulum perturbed(theta1 + 0.001, theta2, 1, 1, 1, 1);
     double di = 0;
-    for (int i = 0; i < initial.get_state().size(); i++) {
+    for (unsigned int i = 0; i < initial.get_state().size(); i++) {
         di += (perturbed.get_state()[i] - initial.get_state()[i]) * (perturbed.get_state()[i] - initial.get_state()[i]);
     }
     di = sqrt(di);
@@ -667,7 +668,7 @@ double get_lyapunov_expo(double theta1, double theta2, double dt = 0.01, double 
 
         if (!(counter % sampling_freq)) {
             double df = 0;
-            for (int i = 0; i < initial.get_state().size(); i++) {
+            for (unsigned int i = 0; i < initial.get_state().size(); i++) {
                 df += (perturbed.get_state()[i] - initial.get_state()[i]) * (perturbed.get_state()[i] - initial.get_state()[i]);
             }
             df = sqrt(df);
@@ -678,7 +679,7 @@ double get_lyapunov_expo(double theta1, double theta2, double dt = 0.01, double 
     }
 
     double lyapunov_exponent = 0;
-    for (int i = 0; i < lyapunov_exponents.size(); i++) {
+    for (unsigned int i = 0; i < lyapunov_exponents.size(); i++) {
         lyapunov_exponent += lyapunov_exponents[i];
     }
     return (lyapunov_exponent / run_time);
@@ -805,7 +806,7 @@ vector<struct RectPoint> find_stable(const int& resolution, const double& thresh
                 }
                 if (lya < threshold) {
                     stable.push_back(init);
-                    cout << "(" << setprecision(15) << init.x << ", " << init.y << ") -> " << lya << endl;
+                    //cout << "(" << setprecision(15) << init.x << ", " << init.y << ") -> " << lya << endl;
                 }
             }
         }
@@ -832,19 +833,19 @@ vector<struct RectPoint> stable_cluster(struct RectPoint& init, const int& resol
             }
             if (lya < threshold) {
                 stable.push_back(init);
-                cout << "(" << setprecision(15) << init.x << ", " << init.y << ") -> " << lya << endl;
+                //cout << "(" << setprecision(15) << init.x << ", " << init.y << ") -> " << lya << endl;
             }
         }
     }
     return stable;
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     //render(2.06780610206984, 2.46970906849588, 1, 1920, 1080, 3600);
     // 2.72533162698915, 4.43749962319558
     // 3.55576746631892, 1.84077694546277 < butterfly
     // 3.95460247116918, 3.01580622898317 < bee
-    draw_heatmap_multithread(1080, 1080);
+    draw_heatmap_multithread(120, 120);
     //find_stable(2048, 0.2, (TAU / 4));
     // struct RectPoint init;
     // init.x = 3.55785;
