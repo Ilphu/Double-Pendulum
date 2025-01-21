@@ -233,4 +233,5 @@ CMakeFiles/dp.dir/double_pendulum.cc.o: \
  /usr/local/Cellar/gcc/14.2.0_1/include/c++/14/limits \
  /usr/local/Cellar/gcc/14.2.0_1/include/c++/14/ctime \
  /usr/local/Cellar/gcc/14.2.0_1/include/c++/14/bits/parse_numbers.h \
- /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/double_pendulum.h
+ /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/double_pendulum.h \
+ /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/structs.h

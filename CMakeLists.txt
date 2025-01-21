@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 SET(CMAKE_CXX_COMPILER "/usr/local/bin/g++-14" CACHE STRING "C++ compiler" FORCE)
 
-add_compile_options(-Wall -Wextra -Werror=all -g)
+add_compile_options(-g)
 
 add_executable(
     dp

@@ -1,12 +1,7 @@
 /**
  * @file double_pendulum.h
- * @author your name (you@domain.com)
+ * @author Garrett
  * @brief 
- * @version 0.1
- * @date 2025-01-20
- * 
- * @copyright Copyright (c) 2025
- * 
  */
 
 #ifndef DOUBLE_PENDULUM_H
@@ -18,29 +13,9 @@
 #include <cmath>
 #include <thread>
 #include <stdexcept>
+#include "structs.h"
 
 using namespace std;
-
-#ifndef STRUCT_GUARD
-#define STRUCT_GUARD
-
-struct RectPoint {
-    double x = 0;
-    double y = 0;
-};
-
-struct PolarPoint {
-    double r = 0;
-    double theta = 0;
-};
-
-struct Pixel {
-    uint8_t r = 0;
-    uint8_t g = 0;
-    uint8_t b = 0;
-};
-
-#endif
 
 class DoublePendulum {
 public:

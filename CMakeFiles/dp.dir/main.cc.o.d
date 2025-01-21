@@ -254,6 +254,7 @@ CMakeFiles/dp.dir/main.cc.o: \
  /usr/local/Cellar/gcc/14.2.0_1/lib/gcc/current/gcc/x86_64-apple-darwin24/14/include/xmmintrin.h \
  /usr/local/Cellar/gcc/14.2.0_1/lib/gcc/current/gcc/x86_64-apple-darwin24/14/include/mmintrin.h \
  /usr/local/Cellar/gcc/14.2.0_1/lib/gcc/current/gcc/x86_64-apple-darwin24/14/include/mm_malloc.h \
- /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/graph.h \
  /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/stb_image_write.h \
+ /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/graph.h \
+ /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/structs.h \
  /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/double_pendulum.h

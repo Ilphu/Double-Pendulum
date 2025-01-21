@@ -234,13 +234,4 @@ CMakeFiles/dp.dir/graph.cc.o: \
  /usr/local/Cellar/gcc/14.2.0_1/include/c++/14/ctime \
  /usr/local/Cellar/gcc/14.2.0_1/include/c++/14/bits/parse_numbers.h \
  /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/graph.h \
- /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/stb_image_write.h \
- /usr/local/Cellar/gcc/14.2.0_1/include/c++/14/stdlib.h \
- /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h \
- /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_string.h \
- /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_rsize_t.h \
- /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_strings.h \
- /usr/local/Cellar/gcc/14.2.0_1/include/c++/14/math.h \
- /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h \
- /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_assert.h \
- /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_static_assert.h
+ /Users/garrettrhoads/Documents/programmingProjects/CPP/Personal/Double-Pendulum/structs.h

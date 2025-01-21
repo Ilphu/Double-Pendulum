@@ -1,12 +1,7 @@
 /**
  * @file double_pendulum.cc
- * @author your name (you@domain.com)
+ * @author Garrett Rhoads
  * @brief 
- * @version 0.1
- * @date 2025-01-20
- * 
- * @copyright Copyright (c) 2025
- * 
  */
 
 #include <stdio.h>
@@ -66,17 +61,17 @@ void DoublePendulum::init(const double& theta1,  const double& theta2,
     _state.push_back(_omega2);
 }
 
-double DoublePendulum::get_mass1() const {return _mass1;}
-double DoublePendulum::get_length1() const {return _length1;}
-double DoublePendulum::get_mass2() const {return _mass2;}
-double DoublePendulum::get_length2() const {return _length2;}
-vector<double> DoublePendulum::get_state() const {return _state;}
-void DoublePendulum::set_mass1(const double& new_mass1) {_mass1 = new_mass1;}
-void DoublePendulum::set_length1(const double& new_length1) {_length1 = new_length1;}
-void DoublePendulum::set_mass2(const double& new_mass2) {_mass2 = new_mass2;}
-void DoublePendulum::set_length2(const double& new_length2) {_length2 = new_length2;}
-void DoublePendulum::set_state(const vector<double>& new_state) {_state[0] = new_state[0]; _state[1] = new_state[1]; 
-                                                                 _state[2] = new_state[2]; _state[3] = new_state[3];}
+double DoublePendulum::get_mass1() const { return _mass1; }
+double DoublePendulum::get_length1() const { return _length1; }
+double DoublePendulum::get_mass2() const { return _mass2; }
+double DoublePendulum::get_length2() const { return _length2; }
+vector<double> DoublePendulum::get_state() const { return _state; }
+void DoublePendulum::set_mass1(const double& new_mass1) { _mass1 = new_mass1; }
+void DoublePendulum::set_length1(const double& new_length1) { _length1 = new_length1; }
+void DoublePendulum::set_mass2(const double& new_mass2) { _mass2 = new_mass2; }
+void DoublePendulum::set_length2(const double& new_length2) { _length2 = new_length2; }
+void DoublePendulum::set_state(const vector<double>& new_state) { _state[0] = new_state[0]; _state[1] = new_state[1];  
+                                                                 _state[2] = new_state[2]; _state[3] = new_state[3]; }
 
 vector<double> DoublePendulum::diff_eq(const vector<double>& y, double t) {
     t++; // to make cmake happy
@@ -151,7 +146,7 @@ double DoublePendulum::get_energy() {
     double omega1 = _state[2];
     double omega2 = _state[3];
     double T = 0.5 * (_mass1 + _mass2) * _length1 * _length1 * omega1 * omega1 + (_mass2 / 2) * _length2 * _length2 * 
-               omega2 * omega2 + _mass2 * _length1 * _length2 * omega1 * omega2 * cos(theta1 - theta2);
+                      omega2 * omega2 + _mass2 * _length1 * _length2 * omega1 * omega2 * cos(theta1 - theta2);
     double U = -(_mass1 + _mass2) * _length1 * g * cos(theta1) - _mass2 * _length2 * g * cos(theta2);
     return T + U;
 }

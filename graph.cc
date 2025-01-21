@@ -1,6 +1,6 @@
 /**
  * @file graph.cc
- * @author your name (you@domain.com)
+ * @author Garrett
  * @brief 
  */
 
@@ -16,8 +16,7 @@ using namespace std;
 
 Graph::Graph() {}
 
-Graph::Graph(const int& img_width_res, const int& img_height_res, 
-             const double& graph_width, const double& graph_height) {
+Graph::Graph(const int& img_width_res, const int& img_height_res, const double& graph_width, const double& graph_height) {
     _img_width = img_width_res;
     _img_height = img_height_res;
     _graph_width = graph_width;
@@ -35,6 +34,7 @@ int Graph::get_img_height() const { return _img_height; };
 double Graph::get_graph_width() const { return _graph_width; };
 double Graph::get_graph_height() const { return _graph_height; };
 int Graph::get_img_size() const { return _img_size; };
+uint8_t* Graph::get_img() const { return _img; }
 
 // void Graph::set_img_width(const int& new_img_width) {};
 // void Graph::set_img_height(const int& new_img_height) {};
@@ -148,6 +148,60 @@ void Graph::bg_fill(const struct Pixel& px) {
     }
 }
 
-void Graph::write_image(const string& file_name) {
-    stbi_write_png(file_name.c_str(), _img_width, _img_height, CHANNELS, _img, _img_width * CHANNELS);
+Graph& Graph::operator-=(Graph& graph) {
+    if (_img_size != graph.get_img_size()) {
+        cout << "Images of different sizes" << endl;
+        throw;
+    }
+    struct Pixel px_this;
+    struct Pixel px_graph;
+    for (int i = 0; i < _img_height; i++) {
+        for (int j = 0; j < _img_width; j++) {
+            px_this = this->get_pixel(j, i);
+            px_graph = graph.get_pixel(j, i);
+            int r = px_this.r - px_graph.r;
+            int g = px_this.g - px_graph.g;
+            int b = px_this.b - px_graph.b;
+
+            if (r < 0) { r = 0; }
+            if (g < 0) { g = 0; } 
+            if (b < 0) { b = 0; }
+
+            px_this.r = r;
+            px_this.g = g;
+            px_this.b = b;
+
+            this->draw_pixel(j, i, px_this);                
+        }
+    }
+    return *this;
+}
+
+Graph& Graph::operator+=(Graph& graph) {
+    if (_img_size != graph.get_img_size()) {
+        cout << "Images of different sizes" << endl;
+        throw;
+    }
+    struct Pixel px_this;
+    struct Pixel px_graph;
+    for (int i = 0; i < _img_height; i++) {
+        for (int j = 0; j < _img_width; j++) {
+            px_this = this->get_pixel(j, i);
+            px_graph = graph.get_pixel(j, i);
+            int r = px_this.r + px_graph.r;
+            int g = px_this.g + px_graph.g;
+            int b = px_this.b + px_graph.b;
+
+            if (r > 0xFF) { r = 0xFF; }
+            if (g > 0xFF) { g = 0xFF; } 
+            if (b > 0xFF) { b = 0xFF; }
+
+            px_this.r = r;
+            px_this.g = g;
+            px_this.b = b;
+
+            this->draw_pixel(j, i, px_this);                
+        }
+    }
+    return *this;
 }
