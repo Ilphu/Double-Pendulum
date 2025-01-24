@@ -91,6 +91,10 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
         stbi_write_png(output.c_str(), canvas.get_img_width(), 
                        canvas.get_img_height(), CHANNELS, canvas.get_img(), 
                        canvas.get_img_width() * CHANNELS);
+
+        for (unsigned int i = 0; i < dp_arr.size(); i++) {
+            delete dp_arr[i];
+        }
     }
 }
 
