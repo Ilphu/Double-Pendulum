@@ -26,7 +26,7 @@
 
 using namespace std;
 
-const int NUM_THREADS = 4;
+const int NUM_THREADS = thread::hardware_concurrency();
 //const int CHANNELS = 3;
 const double TAU = 2 * M_PI;
 
@@ -318,10 +318,10 @@ vector<struct RectPoint> stable_cluster(struct RectPoint& init, const int& resol
 
 int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
-        if (argv[i] == "-r") {
+        if (strcmp(argv[i], "-r") == 0) {
             render(2.06780610206984, 2.46970906849588, 1, 1920, 1080, 300);
-        } else if (argv[i] == "-hm") {
-            draw_heatmap_multithread(64, 64);
+        } else if (strcmp(argv[i], "-hm") == 0) {
+            draw_heatmap_multithread(stoi(argv[i + 1]), stoi(argv[i + 1]));
         }
     }
     //render(2.06780610206984, 2.46970906849588, 1, 1920, 1080, 300);
