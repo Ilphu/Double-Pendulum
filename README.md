@@ -6,6 +6,10 @@
 
 A simple C++ prgoram designed to find and display stable double pendulum orbits.
 
+## Compilation and Use:
+
+To compile this program, run `cmake -B build` then `cmake --build build` in a shell of your choice. Run `./build/bin/dp -r` to render a stable pendulum orbit or run `./build/bin/dp -hm 100` to render a 100x100 heatmap where 100 can be changed to whatever you like.
+
 ## Credits:
 
 All images created in this project are created using the `stbi` libraries.
