@@ -12,8 +12,14 @@
 #include <stdexcept>
 #include "double_pendulum.h"
 
+/**
+ * @brief default contructor
+ */
 DoublePendulum::DoublePendulum() {}
 
+/**
+ * @brief creates a double pendulum object and initializes all attributes
+ */
 DoublePendulum::DoublePendulum(const double& theta1,  const double& theta2, 
                                const double& mass1,   const double& mass2, 
                                const double& length1, const double& length2) {

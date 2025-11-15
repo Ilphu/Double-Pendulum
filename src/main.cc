@@ -10,13 +10,15 @@
 #include <vector>
 #include <cmath>
 #include <thread>
-#include <stdexcept>
-//#include <iomapip>
-//#include <bits/stdc++.h> 
+#include <SDL2/SDL.h>
+#include <atomic>
+#include <chrono>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
 #include "graph.h"
 #include "double_pendulum.h"
 #include "structs.h"
@@ -26,9 +28,22 @@
 
 using namespace std;
 
-const int NUM_THREADS = thread::hardware_concurrency();
-//const int CHANNELS = 3;
+const int NUM_THREADS = thread::hardware_concurrency() / 2;
 const double TAU = 2 * M_PI;
+atomic<bool> frame_ready{false};
+atomic<bool> timer_running{false};
+
+void start_timer_loop() {
+    thread([]() {
+        while (timer_running) {
+            this_thread::sleep_for(chrono::milliseconds(16));
+            frame_ready = true;
+            while (frame_ready && timer_running) {
+                this_thread::sleep_for(chrono::milliseconds(1));
+            }
+        }
+    }).detach();
+}
 
 void render(const double& theta1, const double& theta2, const int& num_pendulums, 
             const int& res_width, const int& res_height, const int& total_frames, 
@@ -36,13 +51,13 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
 
     struct RectPoint origin;
     
-    Graph canvas(res_width, res_height, 7.11111, 4);
+    Graph canvas(res_width, res_height, 7.11111, 4); // 7.11111
     Graph trace(res_width, res_height, 7.11111, 4);
     trace.blackout();
 
     vector<DoublePendulum*> dp_arr;
     for (int i = 0; i < num_pendulums; i++) {
-        DoublePendulum *dp = new DoublePendulum(theta1, theta2 + (0.0001 * i), 1, 1, 1, 1);
+        DoublePendulum *dp = new DoublePendulum(theta1, theta2 + (0.0000000000001 * i), 1, 1, 1, 1);
         dp_arr.push_back(dp);
     }
     double dt = 1.0 / frame_rate;
@@ -50,13 +65,13 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
 
     vector<struct RectPoint> dp_points;
 
-    struct RectPoint prev_trace;
-    struct RectPoint curr_trace;
+    // struct RectPoint prev_trace;
+    // struct RectPoint curr_trace;
 
-    struct Pixel trace_color;
-    trace_color.r = 0x40;
-    trace_color.g = 0x40;
-    trace_color.b = 0x40;
+    // struct Pixel trace_color;
+    // trace_color.r = 0x40;
+    // trace_color.g = 0x40;
+    // trace_color.b = 0x40;
 
     // #1e1e2e
     struct Pixel bg_color;
@@ -71,6 +86,7 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
     pendulum_color.b = 0xfa;
 
     for (int frame = 0; frame < total_frames; frame++) {
+        cout << frame << endl;
         canvas.bg_fill(bg_color);
 
         for (int i = 0; i < num_pendulums; i++) {
@@ -79,22 +95,109 @@ void render(const double& theta1, const double& theta2, const int& num_pendulums
             canvas.draw_line(origin, dp_points[0], pendulum_color);
             canvas.draw_line(dp_points[0], dp_points[1], pendulum_color);
 
-            prev_trace = curr_trace;
-            curr_trace = dp_points[1];
-            if (frame != 0) { trace.draw_line(prev_trace, curr_trace, trace_color); }
+            // prev_trace = curr_trace;
+            // curr_trace = dp_points[1];
+            // if (frame != 0) { trace.draw_line(prev_trace, curr_trace, trace_color); }
         }
         t += dt;
         
-        canvas += trace;
+        // canvas += trace;
         
         string output = "output/frames/frame_" + to_string(frame) + ".png";
         stbi_write_png(output.c_str(), canvas.get_img_width(), 
                        canvas.get_img_height(), CHANNELS, canvas.get_img(), 
                        canvas.get_img_width() * CHANNELS);
+    }
+    for (unsigned int i = 0; i < dp_arr.size(); i++) {
+        delete dp_arr[i];
+    }
+}
 
-        for (unsigned int i = 0; i < dp_arr.size(); i++) {
-            delete dp_arr[i];
+void render_live(const double& theta1, const double& theta2, const int& num_pendulums, 
+                 const int& res_width, const int& res_height) {
+
+    struct RectPoint origin;
+    
+    Graph canvas(res_width, res_height, 7.11111, 4);
+    Graph trace(res_width, res_height, 7.11111, 4);
+    trace.blackout();
+
+    vector<DoublePendulum*> dp_arr;
+    for (int i = 0; i < num_pendulums; i++) {
+        DoublePendulum *dp = new DoublePendulum(theta1, theta2 + (0.0000000000001 * i), 1, 1, 1, 1);
+        dp_arr.push_back(dp);
+    }
+    double dt = 1.0 / 60;
+    double t = 0;
+
+    vector<struct RectPoint> dp_points;
+
+    // struct RectPoint prev_trace;
+    // struct RectPoint curr_trace;
+
+    // struct Pixel trace_color;
+    // trace_color.r = 0x40;
+    // trace_color.g = 0x40;
+    // trace_color.b = 0x40;
+
+    // #1e1e2e
+    struct Pixel bg_color;
+    bg_color.r = 0x1e;
+    bg_color.g = 0x1e;
+    bg_color.b = 0x2e;
+
+    // #89b4fa
+    struct Pixel pendulum_color;
+    pendulum_color.r = 0x89;
+    pendulum_color.g = 0xb4;
+    pendulum_color.b = 0xfa;
+
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Window* window = SDL_CreateWindow("Double Pendulum", SDL_WINDOWPOS_UNDEFINED, 
+        SDL_WINDOWPOS_UNDEFINED, res_width, res_height, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, 
+                            SDL_TEXTUREACCESS_STREAMING, res_width, res_height);
+    timer_running = true;
+    start_timer_loop();
+
+    int frame = 0;
+    bool running = true;
+    while (running) {
+        SDL_Event e;
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) { running = false; }
         }
+        if (frame_ready) {
+            frame_ready = false;
+            canvas.bg_fill(bg_color);
+
+            for (int i = 0; i < num_pendulums; i++) {
+                dp_arr[i]->update_state(t, dt);
+                dp_points = dp_arr[i]->get_position(1);
+                canvas.draw_line(origin, dp_points[0], pendulum_color);
+                canvas.draw_line(dp_points[0], dp_points[1], pendulum_color);
+
+                // prev_trace = curr_trace;
+                // curr_trace = dp_points[1];
+                // if (frame != 0) { trace.draw_line(prev_trace, curr_trace, trace_color); }
+            }
+            t += dt;
+            
+            // canvas += trace;
+
+            SDL_UpdateTexture(texture, NULL, canvas.get_img(), canvas.get_img_width() * 3);
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture, NULL, NULL);
+            SDL_RenderPresent(renderer);
+
+            frame++;
+        }
+    }
+    timer_running = false;
+
+    for (unsigned int i = 0; i < dp_arr.size(); i++) {
+        delete dp_arr[i];
     }
 }
 
@@ -152,11 +255,12 @@ double get_lyapunov_expo(double theta1, double theta2, double dt = 0.01,
 }
 
 struct Pixel get_heatmap_color(double t) {
-    const int NUM_COLORS = 4;
-    static double color[NUM_COLORS][3] = {{0, 0, 1},  
-                                          {0, 1, 0},  
-                                          {1, 1, 0},  
-                                          {1, 0, 0}};
+    const int NUM_COLORS = 5;
+    static double color[NUM_COLORS][3] = {{0, 0, 0},    // black
+                                          {0, 0, 1},    // blue
+                                          {0, 1, 0},    // green
+                                          {1, 1, 0},    // yellow
+                                          {1, 0, 0}};   // red
     int idx1;      
     int idx2;      
     double frac_between = 0;
@@ -319,12 +423,13 @@ vector<struct RectPoint> stable_cluster(struct RectPoint& init, const int& resol
 int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-r") == 0) {
-            render(2.06780610206984, 2.46970906849588, 1, 1920, 1080, 300);
+            render_live(2, 2.5, 10, 720, 450);
         } else if (strcmp(argv[i], "-hm") == 0) {
             draw_heatmap_multithread(stoi(argv[i + 1]), stoi(argv[i + 1]));
         }
     }
-    //render(2.06780610206984, 2.46970906849588, 1, 1920, 1080, 300);
+    // render(2, 2.5, 10, 1920, 1080, 3000);
+    // 2.06780610206984, 2.46970906849588
     // 2.72533162698915, 4.43749962319558
     // 3.55576746631892, 1.84077694546277 < butterfly
     // 3.95460247116918, 3.01580622898317 < bee
